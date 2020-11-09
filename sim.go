@@ -80,17 +80,17 @@ var ParamSets = params.Sets{
 				}},
 			{Sel: ".Output", Desc: "output has higher inhib because localist",
 				Params: params.Params{
-					"Layer.Inhib.Layer.Gi": "1.4",
+					"Layer.Inhib.Layer.Gi": "1.4", //WHAT ARE THESE NUMBERS FOR? WEIGHTS?
 				}},
-			{Sel: "#EgoInput", Desc: "output has higher inhib because localist",
+			{Sel: "#Wine1Input", Desc: "output has higher inhib because localist",
 				Params: params.Params{
 					"Layer.Inhib.Layer.Gi": "2.6",
 				}},
-			{Sel: "#AlloInput", Desc: "output has higher inhib because localist",
+			{Sel: "#Wine2Input", Desc: "output has higher inhib because localist",
 				Params: params.Params{
 					"Layer.Inhib.Layer.Gi": "2.0",
 				}},
-			{Sel: "#AlloHidden", Desc: "output has higher inhib because localist",
+			{Sel: "#Combined", Desc: "output has higher inhib because localist",
 				Params: params.Params{
 					"Layer.Inhib.Layer.Gi": "2.0",
 				}},
@@ -147,46 +147,46 @@ type Sim struct {
 	EpcPerTrlMSec  float64 `inactive:"+" desc:"how long did the epoch take per trial in wall-clock milliseconds"`
 	FirstZero      int     `inactive:"+" desc:"epoch at when SSE first went to zero"`
 	NZero          int     `inactive:"+" desc:"number of epochs in a row with zero SSE"`
-	DistanceError  float64
-	AngleError     float64
-	EgoCosDiff     float64
-	AlloCosDiff    float64
+	//	DistanceError  float64
+	//	AngleError     float64
+	//	EgoCosDiff     float64
+	//	AlloCosDiff    float64
 
 	// internal state - view:"-"
-	TargAng        float32 `inactive:"+" desc:"actual angle"`
-	TargDist       float32
-	Pt1X           float32
-	Pt1Y           float32
-	Pt2X           float32
-	Pt2Y           float32
-	GuessAng       float32 `inactive:"+" desc:"guessed angle"`
-	SumErr         float64 `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
-	SumSSE         float64 `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
-	SumAvgSSE      float64 `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
-	SumCosDiff     float64 `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
-	SumDistError   float64
-	SumAngError    float64
-	SumEgoCosDiff  float64
-	SumAlloCosDiff float64
-	Win            *gi.Window                  `view:"-" desc:"main GUI window"`
-	NetView        *netview.NetView            `view:"-" desc:"the network viewer"`
-	ToolBar        *gi.ToolBar                 `view:"-" desc:"the master toolbar"`
-	TrnEpcPlot     *eplot.Plot2D               `view:"-" desc:"the training epoch plot"`
-	TstEpcPlot     *eplot.Plot2D               `view:"-" desc:"the testing epoch plot"`
-	TstTrlPlot     *eplot.Plot2D               `view:"-" desc:"the test-trial plot"`
-	TstCycPlot     *eplot.Plot2D               `view:"-" desc:"the test-cycle plot"`
-	RunPlot        *eplot.Plot2D               `view:"-" desc:"the run plot"`
-	TrnEpcFile     *os.File                    `view:"-" desc:"log file"`
-	RunFile        *os.File                    `view:"-" desc:"log file"`
-	ValsTsrs       map[string]*etensor.Float32 `view:"-" desc:"for holding layer values"`
-	SaveWts        bool                        `view:"-" desc:"for command-line run only, auto-save final weights after each run"`
-	NoGui          bool                        `view:"-" desc:"if true, runing in no GUI mode"`
-	LogSetParams   bool                        `view:"-" desc:"if true, print message for all params that are set"`
-	IsRunning      bool                        `view:"-" desc:"true if sim is running"`
-	StopNow        bool                        `view:"-" desc:"flag to stop running"`
-	NeedsNewRun    bool                        `view:"-" desc:"flag to initialize NewRun if last one finished"`
-	RndSeed        int64                       `view:"-" desc:"the current random seed"`
-	LastEpcTime    time.Time                   `view:"-" desc:"timer for last epoch"`
+	//	TargAng        float32 `inactive:"+" desc:"actual angle"`
+	//	TargDist       float32
+	//	Pt1X           float32
+	//	Pt1Y           float32
+	//	Pt2X           float32
+	//  Pt2Y           float32
+	//	GuessAng       float32 `inactive:"+" desc:"guessed angle"`
+	//	SumErr         float64 `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
+	//	SumSSE         float64 `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
+	//	SumAvgSSE      float64 `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
+	//	SumCosDiff     float64 `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
+	//	SumDistError   float64
+	//	SumAngError    float64
+	//	SumEgoCosDiff  float64
+	//	SumAlloCosDiff float64
+	Win          *gi.Window                  `view:"-" desc:"main GUI window"`
+	NetView      *netview.NetView            `view:"-" desc:"the network viewer"`
+	ToolBar      *gi.ToolBar                 `view:"-" desc:"the master toolbar"`
+	TrnEpcPlot   *eplot.Plot2D               `view:"-" desc:"the training epoch plot"`
+	TstEpcPlot   *eplot.Plot2D               `view:"-" desc:"the testing epoch plot"`
+	TstTrlPlot   *eplot.Plot2D               `view:"-" desc:"the test-trial plot"`
+	TstCycPlot   *eplot.Plot2D               `view:"-" desc:"the test-cycle plot"`
+	RunPlot      *eplot.Plot2D               `view:"-" desc:"the run plot"`
+	TrnEpcFile   *os.File                    `view:"-" desc:"log file"`
+	RunFile      *os.File                    `view:"-" desc:"log file"`
+	ValsTsrs     map[string]*etensor.Float32 `view:"-" desc:"for holding layer values"`
+	SaveWts      bool                        `view:"-" desc:"for command-line run only, auto-save final weights after each run"`
+	NoGui        bool                        `view:"-" desc:"if true, runing in no GUI mode"`
+	LogSetParams bool                        `view:"-" desc:"if true, print message for all params that are set"`
+	IsRunning    bool                        `view:"-" desc:"true if sim is running"`
+	StopNow      bool                        `view:"-" desc:"flag to stop running"`
+	NeedsNewRun  bool                        `view:"-" desc:"flag to initialize NewRun if last one finished"`
+	RndSeed      int64                       `view:"-" desc:"the current random seed"`
+	LastEpcTime  time.Time                   `view:"-" desc:"timer for last epoch"`
 }
 
 // this registers this Sim Type and gives it properties that e.g.,
@@ -262,47 +262,39 @@ func (ss *Sim) ConfigEnv() {
 
 func (ss *Sim) ConfigNet(net *leabra.Network) {
 	net.InitName(net, "EnvSim")
-	inp := net.AddLayer2D("EgoInput", ss.Size*2-1, ss.Size*2-1, emer.Target)
-	attn := net.AddLayer2D("Attn", ss.Size+3, ss.Size+3, emer.Input)
-	alloinput := net.AddLayer2D("AlloInput", ss.Size+3, ss.Size+3, emer.Input)
-	allohid := net.AddLayer2D("AlloHidden", 20, 20, emer.Hidden)
-	egohid := net.AddLayer2D("EgoHidden", 12, 12, emer.Hidden)
-	//x := net.AddLayer2D("X", 1, ss.Size, emer.Target)
-	//y := net.AddLayer2D("Y", 1, ss.Size, emer.Target)
-	dist := net.AddLayer2D("Distance", 1, ss.TrainEnv.NDistUnits, emer.Target)
-	ang := net.AddLayer2D("Angle", 1, ss.TrainEnv.NAngleUnits, emer.Target)
+	w1 := net.AddLayer2D("wine1", 1, ss.Size, emer.Target)
+	w2 := net.AddLayer2D("wine2", 1, ss.Size, emer.Target)
+	w1hidden := net.AddLayer2D("wine1Hidden", ss.Size, ss.Size, emer.Input)
+	w2hidden := net.AddLayer2D("wine2Hidden", ss.Size, ss.Size, emer.Input)
+	combhidden := net.AddLayer2D("combinedHidden", ss.Size, ss.Size, emer.Input)
+	sd := net.AddLayer2D("SweDry", 1, 1, emer.Target)
+	lf := net.AddLayer2D("LigFul", 1, 1, emer.Target)
 
-	//x.SetClass("Output")
-	//y.SetClass("Output")
-	dist.SetClass("Output")
-	ang.SetClass("Output")
+	sd.SetClass("Output")
+	lf.SetClass("Output")
 
 	// use this to position layers relative to each other
 	// default is Above, YAlign = Front, XAlign = Center
-	//y.SetRelPos(relpos.Rel{Rel: relpos.Behind, Other: "X", XAlign: relpos.Left, Space: 4})
-	//attn.SetRelPos(relpos.Rel{Rel: relpos.Behind, Other: "EgoInput", YAlign: relpos.Front, Space: 4})
-	//allohid.SetRelPos(relpos.Rel{Rel: relpos.Behind, Other: "EgoHidden", YAlign: relpos.Front, Space: 4})
-	alloinput.SetRelPos(relpos.Rel{Rel: relpos.LeftOf, Other: "EgoInput", YAlign: relpos.Front, Space: 2})
-	allohid.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "AlloInput", YAlign: relpos.Front, Space: 4})
-	allohid.SetRelPos(relpos.Rel{Rel: relpos.LeftOf, Other: "EgoHidden", YAlign: relpos.Front, Space: 2})
-	egohid.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "EgoInput", YAlign: relpos.Front, XAlign: relpos.Left})
-	attn.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "EgoHidden", YAlign: relpos.Front, XAlign: relpos.Left})
-	dist.SetRelPos(relpos.Rel{Rel: relpos.LeftOf, Other: "Attn", YAlign: relpos.Front, XAlign: relpos.Middle, Space: 1})
-	ang.SetRelPos(relpos.Rel{Rel: relpos.Behind, Other: "Distance", XAlign: relpos.Middle, Space: 4, Scale: 0.5})
+	//w1.SetRelPos(relpos.Rel{Rel: relpos.LeftOf, Other: "EgoInput", YAlign: relpos.Front, Space: 2})
+	w2.SetRelPos(relpos.Rel{Rel: relpos.rightOf, Other: "wine1", YAlign: relpos.Front, Space: 2})
+	w1hidden.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "wine1", YAlign: relpos.Front, Space: 2})
+	w2hidden.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "wine2Hidden", YAlign: relpos.Front, Space: 2})
+	combhidden.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "wine2Hidden", XAlign: relpos.Middle, Space: 2})
+	sd.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "combinedHidden", YAlign: relpos.Front, Space: 2, Scale: 0.5})
+	lf.SetRelPos(relpos.Rel{Rel: relpos.LeftOf, Other: "SweDry", YAlign: relpos.Front, Space: 2, Scale: 0.5})
+
 	// note: see emergent/prjn module for all the options on how to connect
 	// NewFull returns a new prjn.Full connectivity pattern
 	full := prjn.NewFull()
 
-	net.ConnectLayers(inp, egohid, full, emer.Forward)
-	net.ConnectLayers(egohid, inp, full, emer.Forward)
-	net.ConnectLayers(attn, allohid, full, emer.Forward)
-	net.ConnectLayers(alloinput, allohid, full, emer.Forward)
-	net.ConnectLayers(allohid, alloinput, full, emer.Forward)
-	//net.BidirConnectLayers(egohid, x, full)
-	//net.BidirConnectLayers(egohid, y, full)
-	net.BidirConnectLayers(allohid, inp, full)
-	net.BidirConnectLayers(egohid, dist, full)
-	net.BidirConnectLayers(egohid, ang, full)
+	net.ConnectLayers(w1, w1hidden, full, emer.Forward) //what is full?
+	net.ConnectLayers(w2, w2hidden, full, emer.Forward)
+
+	// connect the combination layers to the w1/w2 hidden layers and then combine the combhidden layer to the sweet/dry light/full keys
+	net.BidirConnectLayers(w1hidden, combhidden, full, emer.Forward)
+	net.BidirConnectLayers(s2hidden, combhidden, full, emer.Forward)
+	net.BidirConnectLayers(combhidden, sd, full)
+	net.BidirConnectLayers(combhidden, lf, full)
 
 	// note: if you wanted to change a layer type from e.g., Target to Compare, do this:
 	// out.SetType(emer.Compare)
@@ -437,7 +429,7 @@ func (ss *Sim) ApplyInputs(en env.Env) {
 	ss.Net.InitExt() // clear any existing inputs -- not strictly necessary if always
 	// going to the same layers, but good practice and cheap anyway
 
-	lays := []string{"EgoInput", "Attn", "AlloInput", "Distance", "Angle"}
+	lays := []string{"Wine1", "Wine2", "Wine1Pop", "Wine2Pop", "CombinedPop", "SweetDry", "LightFull"}
 	for _, lnm := range lays {
 		ly := ss.Net.LayerByName(lnm).(leabra.LeabraLayer).AsLeabra()
 		pats := en.State(ly.Nm)
