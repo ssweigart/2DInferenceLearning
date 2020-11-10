@@ -6,14 +6,12 @@ package main
 
 import (
 	"fmt"
-	"image"
 	"math/rand"
 	"time"
 
 	"github.com/emer/emergent/env"
-	"github.com/emer/emergent/popcode"
+	"github.com/emer/emergent/erand"
 	"github.com/emer/etable/etensor"
-	"github.com/goki/mat32"
 )
 
 // ExEnv is an example environment, that sets a single input point in a 2D
@@ -21,33 +19,36 @@ import (
 // It can be used as a starting point for writing your own Env, without
 // having much existing code to rewrite.
 type ExEnv struct {
-	Nm          string `desc:"name of this environment"`
-	Dsc         string `desc:"description of this environment"`
-	Size        int    `desc:"size of each dimension in 2D input"`
-	MinDist     float32
-	MaxDist     int
-	MaxAngle    int
-	WineUnits   int
-	Wine1       etensor.Float32 // adding the first wine. Is it a etensor.Float32?
-	Wine2       etensor.Float32 // added
-	Wine1Pop    popcode.TwoD    // hidden layer for wine 1 -> reflavored AlloInput
-	Wine2Pop    popcode.TwoD    // hidden layer for wine 2 -> reflavored EgoInput
-	CombinedPop popcode.TwoD    // large hidden layer that gets input from both other hidden layers
-	SweetDry    etensor.Float32 //is this something other than a 1x1 etensor?
-	LightFull   etensor.Float32 //determining if something is in the light or full dimension
-	W1Input     etensor.Float32 `desc: Hidden layer 1 input state, 2D Size x Size"`
-	W2Input     etensor.Float32 `desc: Hidden layer 1 input state, 2D Size x Size"`
+	Nm      string `desc:"name of this environment"`
+	Dsc     string `desc:"description of this environment"`
+	Size    int    `desc:"size of each dimension in 2D input"`
+	MinDist float32
+	MaxDist int
+	//MaxAngle    int
+	//WineUnits   int
+	Wine1input etensor.Float32 // adding the first wine. Is it a etensor.Float32?
+	Wine2input etensor.Float32 // added
+	//Wine1Pop    popcode.TwoD    // hidden layer for wine 1 -> reflavored AlloInput
+	//Wine2Pop    popcode.TwoD    // hidden layer for wine 2 -> reflavored EgoInput
+	//CombinedPop popcode.TwoD    // large hidden layer that gets input from both other hidden layers
+	SweetDry  etensor.Float32 //is this something other than a 1x1 etensor?
+	LightFull etensor.Float32 //determining if something is in the light or full dimension
+	AttnDim   etensor.Float32 //determine if you care about sweet/dry or light/full
+	DimSwitch bool
+	//	W1Input     etensor.Float32 `desc: Hidden layer 1 input state, 2D Size x Size"`
+
+	//	W2Input     etensor.Float32 `desc: Hidden layer 1 input state, 2D Size x Size"`
 	//	Things I didn't think we needed anymore?
-	NDistUnits  int
-	NAngleUnits int
+	//NDistUnits  int
+	//NAngleUnits int
 	//DistPop      popcode.OneD `desc:"population encoding of distance value"`
 	//AnglePop     popcode.Ring
 	//AttnPop      popcode.TwoD `desc:"2D population encoding of attn"`
 	//AlloInputPop popcode.TwoD
 	//EgoInputPop  popcode.TwoD
-	Point  image.Point `desc:"X,Y coordinates of point"`
-	Point2 image.Point
-	Point3 image.Point
+	//Point  image.Point `desc:"X,Y coordinates of point"`
+	//Point2 image.Point
+	//Point3 image.Point
 	//Attn         etensor.Float32 `desc: "attentional layer"`
 	// X        etensor.Float32 `desc:"X as a one-hot state 1D Size"`
 	// Y        etensor.Float32 `desc:"Y  as a one-hot state 1D Size"`
@@ -66,15 +67,15 @@ func (ev *ExEnv) Desc() string { return ev.Dsc }
 // Config sets the size, number of trials to run per epoch, and configures the states
 func (ev *ExEnv) Config(sz int, ntrls int) {
 	ev.Size = sz
-	ev.Wine1Pop.Defaults()
-	ev.Wine1Pop.Min = mat32.NewVec2(-1, -1) //WHAT IS THE PURPOSE FOR THIS?
-	ev.Wine1Pop.Max = mat32.NewVec2(float32(sz+3), float32(sz+3))
-	ev.Wine1Pop.Sigma.Set(0.1, 0.1)
-	ev.Wine2Pop.Defaults()
-	ev.Wine2Pop.Min = mat32.NewVec2(-3, -3)
-	ev.Wine2Pop.Max = mat32.NewVec2(float32(sz+5), float32(sz+5))
-	ev.Wine2Pop.Sigma.Set(0.1, 0.1)
-	ev.CombinedPop.Defaults()
+	//ev.Wine1Pop.Defaults()
+	//ev.Wine1Pop.Min = mat32.NewVec2(-1, -1) //WHAT IS THE PURPOSE FOR THIS?
+	//ev.Wine1Pop.Max = mat32.NewVec2(float32(sz+3), float32(sz+3))
+	//ev.Wine1Pop.Sigma.Set(0.1, 0.1)
+	//ev.Wine2Pop.Defaults()
+	//ev.Wine2Pop.Min = mat32.NewVec2(-3, -3)
+	//ev.Wine2Pop.Max = mat32.NewVec2(float32(sz+5), float32(sz+5))
+	// ev.Wine2Pop.Sigma.Set(0.1, 0.1)
+	// ev.CombinedPop.Defaults()
 	// Things I didn't think were necessary anymore?
 	//ev.MaxDist = int(float64(sz) * math.Sqrt(2))
 	//ev.MinDist = 5
@@ -108,11 +109,12 @@ func (ev *ExEnv) Config(sz int, ntrls int) {
 	//ev.Wine2Pop.SetShape([]int{sz, sz}, nil, []string{"Y", "X"})
 
 	//setting the shapes to a 1x
-	ev.Wine1.SetShape([]int{ev.WineUnits}, nil, []string{"Wine1"})
-	ev.Wine2.SetShape([]int{ev.WineUnits}, nil, []string{"Wine2"})
+	ev.Wine1input.SetShape([]int{ev.Size}, nil, []string{"Wine1input"})
+	ev.Wine2input.SetShape([]int{ev.Size}, nil, []string{"Wine2input"})
 
-	ev.LightFull.SetShape([]int{1, 1}, nil, []string{"LightFull"})
-	ev.SweetDry.SetShape([]int{1, 1}, nil, []string{"Wine2"})
+	ev.LightFull.SetShape([]int{1}, nil, []string{"LightFull"})
+	ev.SweetDry.SetShape([]int{1}, nil, []string{"SweetDry"})
+	ev.AttnDim.SetShape([]int{1}, nil, []string{"AttnDim"})
 
 	//ev.EgoInput.SetShape([]int{sz*2 - 1, sz*2 - 1}, nil, []string{"Y", "X"})
 	//ev.Attn.SetShape([]int{sz, sz}, nil, []string{"Y", "X"})
@@ -136,32 +138,29 @@ func (ev *ExEnv) Counters() []env.TimeScales {
 
 func (ev *ExEnv) States() env.Elements {
 	els := env.Elements{
-		{"Wine1", []int{ev.Size}, []string{"Wine1"}},
-		{"Wine2", []int{ev.Size}, []string{"Wine2"}},
-		{"W1input", []int{ev.Size, ev.Size}, []string{"Y", "X"}},
-		{"W2input", []int{ev.Size, ev.Size}, []string{"Y", "X"}},
+		{"Wine1input", []int{ev.Size}, []string{"Wine1input"}},
+		{"Wine2input", []int{ev.Size}, []string{"Wine2input"}},
 		// {"X", []int{ev.Size}, []string{"X"}},
 		// {"Y", []int{ev.Size}, []string{"Y"}},
-		{"SweetDry", []int{ev.Size}, []string{"SweetDry"}}, // should it be int{1}?
-		{"LightFull", []int{ev.Size}, []string{"LightFull"}},
+		{"SweetDry", []int{1}, []string{"SweetDry"}}, // should it be int{1}?
+		{"LightFull", []int{1}, []string{"LightFull"}},
+		{"AttnDim", []int{1}, []string{"AttnDim"}},
 	}
 	return els
 }
 
 func (ev *ExEnv) State(element string) etensor.Tensor {
 	switch element {
-	case "Wine1":
-		return &ev.Wine1
-	case "Wine2":
-		return &ev.Wine2
+	case "Wine1input":
+		return &ev.Wine1input
+	case "Wine2input":
+		return &ev.Wine2input
 	case "SweetDry":
 		return &ev.SweetDry
 	case "LightFull":
 		return &ev.LightFull
-	case "W1input":
-		return &ev.W1Input
-	case "W2input":
-		return &ev.W2Input
+	case "AttnDim":
+		return &ev.AttnDim
 	}
 	return nil
 }
@@ -172,7 +171,7 @@ func (ev *ExEnv) Actions() env.Elements {
 
 // String returns the current state as a string DO YOU NEED THIS ANYMORE??
 func (ev *ExEnv) String() string {
-	return fmt.Sprintf("Pt_%d_%d", ev.Point.X, ev.Point.Y)
+	return fmt.Sprintf("Pt") //, ev.Point.X, ev.Point.Y)
 }
 
 // Init is called to restart environment
@@ -291,7 +290,10 @@ func (ev *ExEnv) Init(run int) {
 // }
 
 func (ev *ExEnv) NewCompare() {
+	//ev.Wine1input = rand.Intn(ev.Size+1)
+	//ev.Wine2input = rand.Intn(ev.Size+1)
 
+	ev.DimSwitch = erand.BoolProb(0.5, -1)
 }
 
 // Step is called to advance the environment state

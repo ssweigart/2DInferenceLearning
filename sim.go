@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math"
 	"math/rand"
 	"os"
 	"strconv"
@@ -17,7 +16,6 @@ import (
 
 	"github.com/emer/emergent/emer"
 	"github.com/emer/emergent/env"
-	"github.com/emer/emergent/erand"
 	"github.com/emer/emergent/netview"
 	"github.com/emer/emergent/params"
 	"github.com/emer/emergent/prjn"
@@ -82,18 +80,6 @@ var ParamSets = params.Sets{
 				Params: params.Params{
 					"Layer.Inhib.Layer.Gi": "1.4", //WHAT ARE THESE NUMBERS FOR? WEIGHTS?
 				}},
-			{Sel: "#Wine1Input", Desc: "output has higher inhib because localist",
-				Params: params.Params{
-					"Layer.Inhib.Layer.Gi": "2.6",
-				}},
-			{Sel: "#Wine2Input", Desc: "output has higher inhib because localist",
-				Params: params.Params{
-					"Layer.Inhib.Layer.Gi": "2.0",
-				}},
-			{Sel: "#Combined", Desc: "output has higher inhib because localist",
-				Params: params.Params{
-					"Layer.Inhib.Layer.Gi": "2.0",
-				}},
 		},
 	}},
 }
@@ -130,23 +116,23 @@ type Sim struct {
 	LayStatNms   []string          `desc:"names of layers to collect more detailed stats on (avg act, etc)"`
 
 	// statistics: note use float64 as that is best for etable.Table
-	AlloTarg       bool    `Determines if AlloInput is a Target or not`
-	TrlErr         float64 `inactive:"+" desc:"1 if trial was error, 0 if correct -- based on SSE = 0 (subject to .5 unit-wise tolerance)"`
-	TrlSSE         float64 `inactive:"+" desc:"current trial's sum squared error"`
-	TrlAvgSSE      float64 `inactive:"+" desc:"current trial's average sum squared error"`
-	TrlCosDiff     float64 `inactive:"+" desc:"current trial's cosine difference"`
-	EpcSSE         float64 `inactive:"+" desc:"last epoch's total sum squared error"`
-	EpcAvgSSE      float64 `inactive:"+" desc:"last epoch's average sum squared error (average over trials, and over units within layer)"`
-	EpcPctErr      float64 `inactive:"+" desc:"last epoch's average TrlErr"`
-	EpcPctCor      float64 `inactive:"+" desc:"1 - last epoch's average TrlErr"`
-	EpcCosDiff     float64 `inactive:"+" desc:"last epoch's average cosine difference for output layer (a normalized error measure, maximum of 1 when the minus phase exactly matches the plus)"`
-	EpcDistError   float64
-	EpcAngError    float64
-	EpcEgoCosDiff  float64
-	EpcAlloCosDiff float64
-	EpcPerTrlMSec  float64 `inactive:"+" desc:"how long did the epoch take per trial in wall-clock milliseconds"`
-	FirstZero      int     `inactive:"+" desc:"epoch at when SSE first went to zero"`
-	NZero          int     `inactive:"+" desc:"number of epochs in a row with zero SSE"`
+	DimSwitch  bool    `Determines if AlloInput is a Target or not` //determine between sweet and dry
+	TrlErr     float64 `inactive:"+" desc:"1 if trial was error, 0 if correct -- based on SSE = 0 (subject to .5 unit-wise tolerance)"`
+	TrlSSE     float64 `inactive:"+" desc:"current trial's sum squared error"`
+	TrlAvgSSE  float64 `inactive:"+" desc:"current trial's average sum squared error"`
+	TrlCosDiff float64 `inactive:"+" desc:"current trial's cosine difference"`
+	EpcSSE     float64 `inactive:"+" desc:"last epoch's total sum squared error"`
+	EpcAvgSSE  float64 `inactive:"+" desc:"last epoch's average sum squared error (average over trials, and over units within layer)"`
+	EpcPctErr  float64 `inactive:"+" desc:"last epoch's average TrlErr"`
+	EpcPctCor  float64 `inactive:"+" desc:"1 - last epoch's average TrlErr"`
+	EpcCosDiff float64 `inactive:"+" desc:"last epoch's average cosine difference for output layer (a normalized error measure, maximum of 1 when the minus phase exactly matches the plus)"`
+	// EpcDistError   float64
+	// EpcAngError    float64
+	// EpcEgoCosDiff  float64
+	// EpcAlloCosDiff float64
+	EpcPerTrlMSec float64 `inactive:"+" desc:"how long did the epoch take per trial in wall-clock milliseconds"`
+	FirstZero     int     `inactive:"+" desc:"epoch at when SSE first went to zero"`
+	NZero         int     `inactive:"+" desc:"number of epochs in a row with zero SSE"`
 	//	DistanceError  float64
 	//	AngleError     float64
 	//	EgoCosDiff     float64
@@ -160,11 +146,11 @@ type Sim struct {
 	//	Pt2X           float32
 	//  Pt2Y           float32
 	//	GuessAng       float32 `inactive:"+" desc:"guessed angle"`
-	//	SumErr         float64 `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
-	//	SumSSE         float64 `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
-	//	SumAvgSSE      float64 `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
-	//	SumCosDiff     float64 `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
-	//	SumDistError   float64
+	SumErr       float64 `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
+	SumSSE       float64 `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
+	SumAvgSSE    float64 `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
+	SumCosDiff   float64 `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
+	SumDistError float64
 	//	SumAngError    float64
 	//	SumEgoCosDiff  float64
 	//	SumAlloCosDiff float64
@@ -198,7 +184,7 @@ var TheSim Sim
 
 // New creates new blank elements and initializes defaults
 func (ss *Sim) New() {
-	ss.Size = 9
+	ss.Size = 8
 	ss.Net = &leabra.Network{}
 	ss.TrnEpcLog = &etable.Table{}
 	ss.TstEpcLog = &etable.Table{}
@@ -212,7 +198,7 @@ func (ss *Sim) New() {
 	ss.TrainUpdt = leabra.AlphaCycle
 	ss.TestUpdt = leabra.Cycle
 	ss.TestInterval = 500
-	ss.LayStatNms = []string{"EgoInput"}
+	//ss.LayStatNms = []string{"EgoInput"}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -262,11 +248,12 @@ func (ss *Sim) ConfigEnv() {
 
 func (ss *Sim) ConfigNet(net *leabra.Network) {
 	net.InitName(net, "EnvSim")
-	w1 := net.AddLayer2D("wine1", 1, ss.Size, emer.Target)
-	w2 := net.AddLayer2D("wine2", 1, ss.Size, emer.Target)
-	w1hidden := net.AddLayer2D("wine1Hidden", ss.Size, ss.Size, emer.Input)
-	w2hidden := net.AddLayer2D("wine2Hidden", ss.Size, ss.Size, emer.Input)
-	combhidden := net.AddLayer2D("combinedHidden", ss.Size, ss.Size, emer.Input)
+	w1 := net.AddLayer2D("Wine1input", 1, ss.Size, emer.Input)
+	w2 := net.AddLayer2D("Wine2input", 1, ss.Size, emer.Input)
+	w1hidden := net.AddLayer2D("wine1Hidden", ss.Size, ss.Size, emer.Hidden)
+	w2hidden := net.AddLayer2D("wine2Hidden", ss.Size, ss.Size, emer.Hidden)
+	combhidden := net.AddLayer2D("combinedHidden", ss.Size, ss.Size, emer.Hidden)
+	AttnDim := net.AddLayer2D("AttDim", 1, 1, emer.Input)
 	sd := net.AddLayer2D("SweDry", 1, 1, emer.Target)
 	lf := net.AddLayer2D("LigFul", 1, 1, emer.Target)
 
@@ -276,12 +263,12 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	// use this to position layers relative to each other
 	// default is Above, YAlign = Front, XAlign = Center
 	//w1.SetRelPos(relpos.Rel{Rel: relpos.LeftOf, Other: "EgoInput", YAlign: relpos.Front, Space: 2})
-	w2.SetRelPos(relpos.Rel{Rel: relpos.rightOf, Other: "wine1", YAlign: relpos.Front, Space: 2})
-	w1hidden.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "wine1", YAlign: relpos.Front, Space: 2})
-	w2hidden.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "wine2Hidden", YAlign: relpos.Front, Space: 2})
-	combhidden.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "wine2Hidden", XAlign: relpos.Middle, Space: 2})
-	sd.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "combinedHidden", YAlign: relpos.Front, Space: 2, Scale: 0.5})
-	lf.SetRelPos(relpos.Rel{Rel: relpos.LeftOf, Other: "SweDry", YAlign: relpos.Front, Space: 2, Scale: 0.5})
+	w2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Wine1input", YAlign: relpos.Front, Space: 1})
+	w1hidden.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Wine1input", YAlign: relpos.Front, Space: 1})
+	w2hidden.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "wine2Hidden", YAlign: relpos.Front, Space: 1})
+	combhidden.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "wine2Hidden", XAlign: relpos.Middle, Space: 1})
+	sd.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "combinedHidden", YAlign: relpos.Front, Space: 1, Scale: 1})
+	lf.SetRelPos(relpos.Rel{Rel: relpos.LeftOf, Other: "SweDry", YAlign: relpos.Front, Space: 1, Scale: 1})
 
 	// note: see emergent/prjn module for all the options on how to connect
 	// NewFull returns a new prjn.Full connectivity pattern
@@ -289,10 +276,12 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 
 	net.ConnectLayers(w1, w1hidden, full, emer.Forward) //what is full?
 	net.ConnectLayers(w2, w2hidden, full, emer.Forward)
+	net.ConnectLayers(AttnDim, w1hidden, full, emer.Forward)
+	net.ConnectLayers(AttnDim, w2hidden, full, emer.Forward)
 
 	// connect the combination layers to the w1/w2 hidden layers and then combine the combhidden layer to the sweet/dry light/full keys
-	net.BidirConnectLayers(w1hidden, combhidden, full, emer.Forward)
-	net.BidirConnectLayers(s2hidden, combhidden, full, emer.Forward)
+	net.BidirConnectLayers(w1hidden, combhidden, full)
+	net.BidirConnectLayers(w2hidden, combhidden, full)
 	net.BidirConnectLayers(combhidden, sd, full)
 	net.BidirConnectLayers(combhidden, lf, full)
 
@@ -429,7 +418,7 @@ func (ss *Sim) ApplyInputs(en env.Env) {
 	ss.Net.InitExt() // clear any existing inputs -- not strictly necessary if always
 	// going to the same layers, but good practice and cheap anyway
 
-	lays := []string{"Wine1", "Wine2", "Wine1Pop", "Wine2Pop", "CombinedPop", "SweetDry", "LightFull"}
+	lays := []string{"Wine1input", "Wine2input", "SweetDry", "LightFull", "AttnDim"}
 	for _, lnm := range lays {
 		ly := ss.Net.LayerByName(lnm).(leabra.LeabraLayer).AsLeabra()
 		pats := en.State(ly.Nm)
@@ -469,23 +458,6 @@ func (ss *Sim) TrainTrial() {
 				return
 			}
 		}
-	}
-
-	ss.AlloTarg = erand.BoolProb(0.5, -1)
-	if ss.AlloTarg {
-		alloinp := ss.Net.LayerByName("AlloInput").(leabra.LeabraLayer).AsLeabra()
-		alloinp.SetType(emer.Target)
-		distance := ss.Net.LayerByName("Distance").(leabra.LeabraLayer).AsLeabra()
-		distance.SetType(emer.Input)
-		angle := ss.Net.LayerByName("Angle").(leabra.LeabraLayer).AsLeabra()
-		angle.SetType(emer.Input)
-	} else {
-		alloinp := ss.Net.LayerByName("AlloInput").(leabra.LeabraLayer).AsLeabra()
-		alloinp.SetType(emer.Input)
-		distance := ss.Net.LayerByName("Distance").(leabra.LeabraLayer).AsLeabra()
-		distance.SetType(emer.Target)
-		angle := ss.Net.LayerByName("Angle").(leabra.LeabraLayer).AsLeabra()
-		angle.SetType(emer.Target)
 	}
 	ss.ApplyInputs(&ss.TrainEnv)
 	ss.AlphaCyc(true)   // train
@@ -543,69 +515,30 @@ func (ss *Sim) InitStats() {
 // different time-scales over which stats could be accumulated etc.
 // You can also aggregate directly from log data, as is done for testing stats
 func (ss *Sim) TrialStats(accum bool) {
-	//x := ss.Net.LayerByName("X").(leabra.LeabraLayer).AsLeabra()
-	//y := ss.Net.LayerByName("Y").(leabra.LeabraLayer).AsLeabra()
-	ss.Pt1X = float32(ss.TrainEnv.Point.X)
-	ss.Pt1Y = float32(ss.TrainEnv.Point.Y)
-	ss.Pt2X = float32(ss.TrainEnv.Point2.X)
-	ss.Pt2Y = float32(ss.TrainEnv.Point2.Y)
-	inp := ss.Net.LayerByName("EgoInput").(leabra.LeabraLayer).AsLeabra()
+	//DimSwitch Sweet dry -> 1, light full -> 0
+	if ss.TrainEnv.DimSwitch {
+		//need list of what is right :O
+		sd := ss.Net.LayerByName("SweetDry").(leabra.LeabraLayer).AsLeabra()
+		lf := ss.Net.LayerByName("LightFull").(leabra.LeabraLayer).AsLeabra() // ask randy if we need this??
+		ss.TrlCosDiff = float64(sd.CosDiff.Cos)
+		//ss.EgoCosDiff = float64(inp.CosDiff.Cos)
+		sd_s, sd_a := sd.MSE(0.5)
+		lf_s, lf_a := lf.MSE(0.5) // if we need it above
+		ss.TrlSSE = sd_s + lf_s
+		ss.TrlAvgSSE = (sd_a + lf_a) / 2
 
-	ss.TrlCosDiff = float64(inp.CosDiff.Cos)
-	ss.EgoCosDiff = float64(inp.CosDiff.Cos)
-	inp_s, inp_a := inp.MSE(0.5)
-	ss.TrlSSE = inp_s
-	ss.TrlAvgSSE = inp_a
-
-	if ss.AlloTarg {
-		alloinput := ss.Net.LayerByName("AlloInput").(leabra.LeabraLayer).AsLeabra()
-		ss.AlloCosDiff = float64(alloinput.CosDiff.Cos)
-		allo_s, allo_a := alloinput.MSE(0.5)
-		ss.TrlSSE += allo_s
-		ss.TrlAvgSSE = (ss.TrlAvgSSE + allo_a) / 2
-		ss.TargDist = ss.TrainEnv.DistVal
 	} else {
-		dist := ss.Net.LayerByName("Distance").(leabra.LeabraLayer).AsLeabra()
-		ang := ss.Net.LayerByName("Angle").(leabra.LeabraLayer).AsLeabra()
-
-		dtsr := ss.ValsTsr(dist.Nm)
-		angtsr := ss.ValsTsr(ang.Nm)
-
-		dist.UnitValsTensor(dtsr, "ActM")
-		ang.UnitValsTensor(angtsr, "ActM")
-
-		distVal := ss.TrainEnv.DistPop.Decode(dtsr.Values)
-		angVal := ss.TrainEnv.AnglePop.Decode(angtsr.Values)
-
-		targDist := ss.TrainEnv.DistVal
-		targAng := ss.TrainEnv.AngVal
-
-		distError := math.Abs(float64(distVal - targDist))
-		angError1 := mat32.Abs(angVal - targAng)
-		angError2 := float32(0)
-		if targAng < 180 {
-			angError2 = mat32.Abs((360 + targAng) - angVal)
-		} else {
-			angError2 = mat32.Abs((targAng - 360) - angVal)
-		}
-
-		ss.DistanceError = float64(distError) / float64(ss.TrainEnv.MaxDist)
-		ss.AngleError = float64(mat32.Min(angError1, float32(angError2))) / 360
-		ss.TargAng = targAng
-		ss.GuessAng = angVal
-		ss.TargDist = ss.TrainEnv.DistVal
-
-		//ss.TrlCosDiff = float64(x.CosDiff.Cos+y.CosDiff.Cos) * 0.5
-		ss.TrlCosDiff = (ss.TrlCosDiff + float64(dist.CosDiff.Cos+ang.CosDiff.Cos)) / 3
-		//ss.TrlSSE, ss.TrlAvgSSE = x.MSE(0.5) // 0.5 = per-unit tolerance -- right side of .5
-		dist_s, dist_a := dist.MSE(0.5)
-		ang_s, ang_a := ang.MSE(0.5)
-		ss.TrlSSE += dist_s + ang_s
-		//ys, ya := y.MSE(0.5)
-		//ss.TrlSSE += ys
-		//ss.TrlAvgSSE = 0.5 * (ss.TrlAvgSSE + ya)
-		ss.TrlAvgSSE = (ss.TrlAvgSSE + dist_a + ang_a) / 3
+		sd := ss.Net.LayerByName("SweetDry").(leabra.LeabraLayer).AsLeabra()
+		lf := ss.Net.LayerByName("LightFull").(leabra.LeabraLayer).AsLeabra() // ask randy if we need this??
+		ss.TrlCosDiff = float64(lf.CosDiff.Cos)
+		//ss.EgoCosDiff = float64(inp.CosDiff.Cos)
+		sd_s, sd_a := sd.MSE(0.5)
+		lf_s, lf_a := lf.MSE(0.5) // if we need it above
+		ss.TrlSSE = sd_s + lf_s
+		ss.TrlAvgSSE = (sd_a + lf_a) / 2
 	}
+
+	//ss.Pt1X = float32(ss.TrainEnv.Point.X)
 
 	if ss.TrlSSE > 0 {
 		ss.TrlErr = 1
@@ -617,10 +550,8 @@ func (ss *Sim) TrialStats(accum bool) {
 		ss.SumSSE += ss.TrlSSE
 		ss.SumAvgSSE += ss.TrlAvgSSE
 		ss.SumCosDiff += ss.TrlCosDiff
-		ss.SumDistError += ss.DistanceError
-		ss.SumAngError += ss.AngleError
-		ss.SumEgoCosDiff += ss.EgoCosDiff
-		ss.SumAlloCosDiff += ss.AlloCosDiff
+		//ss.SumDistError += ss.DistanceError
+
 	}
 }
 
@@ -846,14 +777,6 @@ func (ss *Sim) LogTrnEpc(dt *etable.Table) {
 	ss.EpcPctCor = 1 - ss.EpcPctErr
 	ss.EpcCosDiff = ss.SumCosDiff / nt
 	ss.SumCosDiff = 0
-	ss.EpcDistError = ss.SumDistError / nt
-	ss.SumDistError = 0
-	ss.EpcAngError = ss.SumAngError / nt
-	ss.SumAngError = 0
-	ss.EpcEgoCosDiff = ss.SumEgoCosDiff / nt
-	ss.SumEgoCosDiff = 0
-	ss.EpcAlloCosDiff = ss.SumAlloCosDiff / nt
-	ss.SumAlloCosDiff = 0
 	if ss.FirstZero < 0 && ss.EpcPctErr == 0 {
 		ss.FirstZero = epc
 	}
@@ -879,10 +802,7 @@ func (ss *Sim) LogTrnEpc(dt *etable.Table) {
 	dt.SetCellFloat("PctCor", row, ss.EpcPctCor)
 	dt.SetCellFloat("CosDiff", row, ss.EpcCosDiff)
 	dt.SetCellFloat("PerTrlMSec", row, ss.EpcPerTrlMSec)
-	dt.SetCellFloat("EpcDistError", row, ss.EpcDistError)
-	dt.SetCellFloat("EpcAngError", row, ss.EpcAngError)
-	dt.SetCellFloat("EpcEgoCosDiff", row, ss.EpcEgoCosDiff)
-	dt.SetCellFloat("EpcAlloCosDiff", row, ss.EpcAlloCosDiff)
+	//dt.SetCellFloat("EpcDistError", row, ss.EpcDistError)
 
 	for _, lnm := range ss.LayStatNms {
 		ly := ss.Net.LayerByName(lnm).(leabra.LeabraLayer).AsLeabra()
@@ -914,10 +834,7 @@ func (ss *Sim) ConfigTrnEpcLog(dt *etable.Table) {
 		{"PctCor", etensor.FLOAT64, nil, nil},
 		{"CosDiff", etensor.FLOAT64, nil, nil},
 		{"PerTrlMSec", etensor.FLOAT64, nil, nil},
-		{"EpcDistError", etensor.FLOAT64, nil, nil},
-		{"EpcAngError", etensor.FLOAT64, nil, nil},
-		{"EpcEgoCosDiff", etensor.FLOAT64, nil, nil},
-		{"EpcAlloCosDiff", etensor.FLOAT64, nil, nil},
+		//{"EpcDistError", etensor.FLOAT64, nil, nil},
 	}
 	for _, lnm := range ss.LayStatNms {
 		sch = append(sch, etable.Column{lnm + " ActAvg", etensor.FLOAT64, nil, nil})
@@ -938,10 +855,7 @@ func (ss *Sim) ConfigTrnEpcPlot(plt *eplot.Plot2D, dt *etable.Table) *eplot.Plot
 	plt.SetColParams("PctCor", eplot.On, eplot.FixMin, 0, eplot.FixMax, 1) // default plot
 	plt.SetColParams("CosDiff", eplot.Off, eplot.FixMin, 0, eplot.FixMax, 1)
 	plt.SetColParams("PerTrlMSec", eplot.Off, eplot.FixMin, 0, eplot.FloatMax, 0)
-	plt.SetColParams("EpcDistError", eplot.On, eplot.FixMin, 0, eplot.FloatMax, 1)
-	plt.SetColParams("EpcAngError", eplot.On, eplot.FixMin, 0, eplot.FloatMax, 1)
-	plt.SetColParams("EpcEgoCosDiff", eplot.On, eplot.FixMin, 0, eplot.FloatMax, 1)
-	plt.SetColParams("EpcAlloCosDiff", eplot.On, eplot.FixMin, 0, eplot.FloatMax, 1)
+	//plt.SetColParams("EpcDistError", eplot.On, eplot.FixMin, 0, eplot.FloatMax, 1)
 
 	for _, lnm := range ss.LayStatNms {
 		plt.SetColParams(lnm+" ActAvg", eplot.Off, eplot.FixMin, 0, eplot.FixMax, .5)
