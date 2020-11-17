@@ -11,6 +11,7 @@ import (
 
 	"github.com/emer/emergent/env"
 	"github.com/emer/emergent/erand"
+	"github.com/emer/emergent/popcode"
 	"github.com/emer/etable/etensor"
 )
 
@@ -28,13 +29,16 @@ type ExEnv struct {
 	//WineUnits   int
 	Wine1input etensor.Float32 // adding the first wine. Is it a etensor.Float32?
 	Wine2input etensor.Float32 // added
+	SweetDry   etensor.Float32
+	LightFull  etensor.Float32
 	//Wine1Pop    popcode.TwoD    // hidden layer for wine 1 -> reflavored AlloInput
 	//Wine2Pop    popcode.TwoD    // hidden layer for wine 2 -> reflavored EgoInput
 	//CombinedPop popcode.TwoD    // large hidden layer that gets input from both other hidden layers
-	SweetDry  etensor.Float32 //is this something other than a 1x1 etensor?
-	LightFull etensor.Float32 //determining if something is in the light or full dimension
-	AttnDim   etensor.Float32 //determine if you care about sweet/dry or light/full
-	DimSwitch bool
+	SweetDryPop  popcode.OneD    //is this something other than a 1x1 etensor?
+	LightFullPop popcode.OneD    //determining if something is in the light or full dimension
+	AttnDim      etensor.Float32 //determine if you care about sweet/dry or light/full
+	DimSwitch    bool
+	Winner       int
 	//	W1Input     etensor.Float32 `desc: Hidden layer 1 input state, 2D Size x Size"`
 
 	//	W2Input     etensor.Float32 `desc: Hidden layer 1 input state, 2D Size x Size"`
@@ -105,15 +109,24 @@ func (ev *ExEnv) Config(sz int, ntrls int) {
 
 	ev.Trial.Max = ntrls
 	//setting the shape of the big layers- nope
-	//ev.Wine1Pop.SetShape([]int{sz, sz}, nil, []string{"Y", "X"})
+	///ev.Wine1Pop.SetShape([]int{sz, sz}, nil, []string{"Y", "X"})
 	//ev.Wine2Pop.SetShape([]int{sz, sz}, nil, []string{"Y", "X"})
 
 	//setting the shapes to a 1x
 	ev.Wine1input.SetShape([]int{ev.Size}, nil, []string{"Wine1input"})
 	ev.Wine2input.SetShape([]int{ev.Size}, nil, []string{"Wine2input"})
+	ev.LightFull.SetShape([]int{ev.Size * 2}, nil, []string{"LightFull"})
+	ev.SweetDry.SetShape([]int{ev.Size * 2}, nil, []string{"SweetDry"})
 
-	ev.LightFull.SetShape([]int{1}, nil, []string{"LightFull"})
-	ev.SweetDry.SetShape([]int{1}, nil, []string{"SweetDry"})
+	ev.LightFullPop.Defaults()
+	ev.LightFullPop.Min = float32(-1 * sz)
+	ev.LightFullPop.Max = float32(sz)
+	ev.SweetDryPop.Defaults()
+	ev.SweetDryPop.Min = float32(-1 * sz)
+	ev.SweetDryPop.Max = float32(sz)
+
+	//ev.LightFull.SetShape([]int{1, ev.Size}, nil, []string{"LightFull"})
+	//ev.SweetDry.SetShape([]int{1, ev.Size}, nil, []string{"SweetDry"})
 	ev.AttnDim.SetShape([]int{1}, nil, []string{"AttnDim"})
 
 	//ev.EgoInput.SetShape([]int{sz*2 - 1, sz*2 - 1}, nil, []string{"Y", "X"})
@@ -142,8 +155,8 @@ func (ev *ExEnv) States() env.Elements {
 		{"Wine2input", []int{ev.Size}, []string{"Wine2input"}},
 		// {"X", []int{ev.Size}, []string{"X"}},
 		// {"Y", []int{ev.Size}, []string{"Y"}},
-		{"SweetDry", []int{1}, []string{"SweetDry"}}, // should it be int{1}?
-		{"LightFull", []int{1}, []string{"LightFull"}},
+		{"SweetDry", []int{1, ev.Size * 2}, []string{"SweetDry"}}, // should it be int{1}?
+		{"LightFull", []int{1, ev.Size * 2}, []string{"LightFull"}},
 		{"AttnDim", []int{1}, []string{"AttnDim"}},
 	}
 	return els
@@ -290,10 +303,45 @@ func (ev *ExEnv) Init(run int) {
 // }
 
 func (ev *ExEnv) NewCompare() {
-	//ev.Wine1input = rand.Intn(ev.Size+1)
-	//ev.Wine2input = rand.Intn(ev.Size+1)
+	W1loc := 1
+	W2loc := 1
+	sd := 0
+
+	// for {
+	// 	W1loc = rand.Intn(ev.Size)
+	// 	W2loc = rand.Intn(ev.Size)
+	ev.Wine1input.SetZeros()
+	ev.Wine2input.SetZeros()
+	ev.AttnDim.SetZeros()
+
+	ev.Wine1input.SetFloat([]int{W1loc}, 1)
+	ev.Wine2input.SetFloat([]int{W2loc}, 1)
+	ev.AttnDim.SetFloat([]int{0}, 1)
+
+	// 	if W1loc != W2loc {
+	// 		break
+	// 	}
+	// }
+	// if W1loc > W2loc {
+	// 	ev.Winner = 1
+	// }
+	// if W1loc < W2loc {
+	// 	ev.Winner = 2
+	// }
+
+	// ev.Wine1input.SetFloat([]int{W1loc}, 1)
+	// ev.Wine2input.SetFloat([]int{W2loc}, 1)
+
+	// if ev.Winner == 1 {
+	// 	sd = ev.Size
+	// } else {
+	// 	sd = -1 * ev.Size
+	// }
 
 	ev.DimSwitch = erand.BoolProb(0.5, -1)
+	ev.SweetDryPop.Encode(&ev.SweetDry.Values, float32(sd), 1, false)
+	ev.LightFullPop.Encode(&ev.LightFull.Values, 0, 1, false)
+
 }
 
 // Step is called to advance the environment state

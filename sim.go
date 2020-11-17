@@ -184,7 +184,7 @@ var TheSim Sim
 
 // New creates new blank elements and initializes defaults
 func (ss *Sim) New() {
-	ss.Size = 8
+	ss.Size = 6
 	ss.Net = &leabra.Network{}
 	ss.TrnEpcLog = &etable.Table{}
 	ss.TstEpcLog = &etable.Table{}
@@ -254,18 +254,18 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	w2hidden := net.AddLayer2D("wine2Hidden", ss.Size, ss.Size, emer.Hidden)
 	combhidden := net.AddLayer2D("combinedHidden", ss.Size, ss.Size, emer.Hidden)
 	AttnDim := net.AddLayer2D("AttDim", 1, 1, emer.Input)
-	sd := net.AddLayer2D("SweDry", 1, 1, emer.Target)
-	lf := net.AddLayer2D("LigFul", 1, 1, emer.Target)
+	sd := net.AddLayer2D("SweDry", 1, ss.Size*2, emer.Target)
+	lf := net.AddLayer2D("LigFul", 1, ss.Size*2, emer.Target)
 
-	sd.SetClass("Output")
-	lf.SetClass("Output")
+	//sd.SetClass("Output")
+	//lf.SetClass("Output")
 
 	// use this to position layers relative to each other
 	// default is Above, YAlign = Front, XAlign = Center
 	//w1.SetRelPos(relpos.Rel{Rel: relpos.LeftOf, Other: "EgoInput", YAlign: relpos.Front, Space: 2})
-	w2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Wine1input", YAlign: relpos.Front, Space: 1})
+	w2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Wine1input", XAlign: relpos.Middle, Space: .5})
 	w1hidden.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Wine1input", YAlign: relpos.Front, Space: 1})
-	w2hidden.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "wine2Hidden", YAlign: relpos.Front, Space: 1})
+	w2hidden.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Wine2input", YAlign: relpos.Front, Space: 1})
 	combhidden.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "wine2Hidden", XAlign: relpos.Middle, Space: 1})
 	sd.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "combinedHidden", YAlign: relpos.Front, Space: 1, Scale: 1})
 	lf.SetRelPos(relpos.Rel{Rel: relpos.LeftOf, Other: "SweDry", YAlign: relpos.Front, Space: 1, Scale: 1})
@@ -516,27 +516,27 @@ func (ss *Sim) InitStats() {
 // You can also aggregate directly from log data, as is done for testing stats
 func (ss *Sim) TrialStats(accum bool) {
 	//DimSwitch Sweet dry -> 1, light full -> 0
-	if ss.TrainEnv.DimSwitch {
-		//need list of what is right :O
-		sd := ss.Net.LayerByName("SweetDry").(leabra.LeabraLayer).AsLeabra()
-		lf := ss.Net.LayerByName("LightFull").(leabra.LeabraLayer).AsLeabra() // ask randy if we need this??
-		ss.TrlCosDiff = float64(sd.CosDiff.Cos)
-		//ss.EgoCosDiff = float64(inp.CosDiff.Cos)
-		sd_s, sd_a := sd.MSE(0.5)
-		lf_s, lf_a := lf.MSE(0.5) // if we need it above
-		ss.TrlSSE = sd_s + lf_s
-		ss.TrlAvgSSE = (sd_a + lf_a) / 2
+	//if ss.TrainEnv.DimSwitch {
+	//need list of what is right :O
+	sd := ss.Net.LayerByName("SweetDry").(leabra.LeabraLayer).AsLeabra()
+	//lf := ss.Net.LayerByName("LightFull").(leabra.LeabraLayer).AsLeabra() // ask randy if we need this??
+	ss.TrlCosDiff = float64(sd.CosDiff.Cos)
+	//ss.EgoCosDiff = float64(inp.CosDiff.Cos)
+	sd_s, sd_a := sd.MSE(0.5)
+	//lf_s, lf_a := lf.MSE(0.5) // if we need it above
+	ss.TrlSSE = sd_s    //+ lf_s
+	ss.TrlAvgSSE = sd_a //(sd_a + lf_a) / 2
 
-	} else {
-		sd := ss.Net.LayerByName("SweetDry").(leabra.LeabraLayer).AsLeabra()
-		lf := ss.Net.LayerByName("LightFull").(leabra.LeabraLayer).AsLeabra() // ask randy if we need this??
-		ss.TrlCosDiff = float64(lf.CosDiff.Cos)
-		//ss.EgoCosDiff = float64(inp.CosDiff.Cos)
-		sd_s, sd_a := sd.MSE(0.5)
-		lf_s, lf_a := lf.MSE(0.5) // if we need it above
-		ss.TrlSSE = sd_s + lf_s
-		ss.TrlAvgSSE = (sd_a + lf_a) / 2
-	}
+	// } else {
+	// 	sd := ss.Net.LayerByName("SweetDry").(leabra.LeabraLayer).AsLeabra()
+	// 	lf := ss.Net.LayerByName("LightFull").(leabra.LeabraLayer).AsLeabra() // ask randy if we need this??
+	// 	ss.TrlCosDiff = float64(lf.CosDiff.Cos)
+	// 	//ss.EgoCosDiff = float64(inp.CosDiff.Cos)
+	// 	sd_s, sd_a := sd.MSE(0.5)
+	// 	//lf_s, lf_a := lf.MSE(0.5) // if we need it above
+	// 	ss.TrlSSE = sd_s + lf_s
+	// 	ss.TrlAvgSSE = (sd_a + lf_a) / 2
+	// }
 
 	//ss.Pt1X = float32(ss.TrainEnv.Point.X)
 
