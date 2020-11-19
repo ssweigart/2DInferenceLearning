@@ -414,11 +414,12 @@ func (ss *Sim) AlphaCyc(train bool) {
 // It is good practice to have this be a separate method with appropriate
 // args so that it can be used for various different contexts
 // (training, testing, etc).
+
 func (ss *Sim) ApplyInputs(en env.Env) {
 	ss.Net.InitExt() // clear any existing inputs -- not strictly necessary if always
 	// going to the same layers, but good practice and cheap anyway
 
-	lays := []string{"Wine1input", "Wine2input", "SweetDry", "LightFull", "AttnDim"}
+	lays := []string{"Wine1input", "Wine2input", "wine1Hidden", "wine2Hidden", "combinedHidden", "AttDim", "SweDry", "LigFul"}
 	for _, lnm := range lays {
 		ly := ss.Net.LayerByName(lnm).(leabra.LeabraLayer).AsLeabra()
 		pats := en.State(ly.Nm)
@@ -518,7 +519,7 @@ func (ss *Sim) TrialStats(accum bool) {
 	//DimSwitch Sweet dry -> 1, light full -> 0
 	//if ss.TrainEnv.DimSwitch {
 	//need list of what is right :O
-	sd := ss.Net.LayerByName("SweetDry").(leabra.LeabraLayer).AsLeabra()
+	sd := ss.Net.LayerByName("SweDry").(leabra.LeabraLayer).AsLeabra()
 	//lf := ss.Net.LayerByName("LightFull").(leabra.LeabraLayer).AsLeabra() // ask randy if we need this??
 	ss.TrlCosDiff = float64(sd.CosDiff.Cos)
 	//ss.EgoCosDiff = float64(inp.CosDiff.Cos)
