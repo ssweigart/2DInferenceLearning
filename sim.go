@@ -269,6 +269,7 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	combhidden.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "wine2Hidden", XAlign: relpos.Middle, Space: 1})
 	sd.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "combinedHidden", YAlign: relpos.Front, Space: 1, Scale: 1})
 	lf.SetRelPos(relpos.Rel{Rel: relpos.LeftOf, Other: "SweDry", YAlign: relpos.Front, Space: 1, Scale: 1})
+	AttnDim.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "SweDry", YAlign: relpos.Front, Space: 1, Scale: 1})
 
 	// note: see emergent/prjn module for all the options on how to connect
 	// NewFull returns a new prjn.Full connectivity pattern
@@ -523,7 +524,8 @@ func (ss *Sim) TrialStats(accum bool) {
 	//lf := ss.Net.LayerByName("LightFull").(leabra.LeabraLayer).AsLeabra() // ask randy if we need this??
 	ss.TrlCosDiff = float64(sd.CosDiff.Cos)
 	//ss.EgoCosDiff = float64(inp.CosDiff.Cos)
-	sd_s, sd_a := sd.MSE(0.5)
+	sd_s, sd_a := sd.MSE(.5) //<- USED TO BE .5?
+	fmt.Println(sd_a, sd_s)
 	//lf_s, lf_a := lf.MSE(0.5) // if we need it above
 	ss.TrlSSE = sd_s    //+ lf_s
 	ss.TrlAvgSSE = sd_a //(sd_a + lf_a) / 2

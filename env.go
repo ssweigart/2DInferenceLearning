@@ -309,8 +309,8 @@ func (ev *ExEnv) NewCompare() {
 		ev.Wine2input.SetZeros()
 		ev.AttnDim.SetZeros()
 
-		ev.Wine1input.SetFloat([]int{W1loc}, 1)
-		ev.Wine2input.SetFloat([]int{W2loc}, 1)
+		//ev.Wine1input.SetFloat([]int{W1loc}, 1)
+		//ev.Wine2input.SetFloat([]int{W2loc}, 1)
 		ev.AttnDim.SetFloat([]int{0}, 1)
 
 		if W1loc != W2loc {
@@ -328,9 +328,9 @@ func (ev *ExEnv) NewCompare() {
 	ev.Wine2input.SetFloat([]int{W2loc}, 1)
 
 	if ev.Winner == 1 {
-		sd = ev.Size
-	} else {
 		sd = -1 * ev.Size
+	} else {
+		sd = ev.Size
 	}
 
 	ev.DimSwitch = erand.BoolProb(0.5, -1)
