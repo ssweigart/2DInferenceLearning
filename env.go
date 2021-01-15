@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/emer/emergent/env"
-	"github.com/emer/emergent/erand"
 	"github.com/emer/emergent/popcode"
 	"github.com/emer/etable/etensor"
 )
@@ -43,7 +42,7 @@ type ExEnv struct {
 
 	//	W2Input     etensor.Float32 `desc: Hidden layer 1 input state, 2D Size x Size"`
 	//	Things I didn't think we needed anymore?
-	//NDistUnits  int
+	NSDDistUnits int
 	//NAngleUnits int
 	//DistPop      popcode.OneD `desc:"population encoding of distance value"`
 	//AnglePop     popcode.Ring
@@ -108,6 +107,9 @@ func (ev *ExEnv) Config(sz int, ntrls int) {
 	rand.Seed(int64(currentTime.Unix()))
 
 	ev.Trial.Max = ntrls
+
+	ev.NSDDistUnits = 10
+
 	//setting the shape of the big layers- nope
 	///ev.Wine1Pop.SetShape([]int{sz, sz}, nil, []string{"Y", "X"})
 	//ev.Wine2Pop.SetShape([]int{sz, sz}, nil, []string{"Y", "X"})
@@ -115,16 +117,18 @@ func (ev *ExEnv) Config(sz int, ntrls int) {
 	//setting the shapes to a 1x
 	ev.Wine1input.SetShape([]int{ev.Size}, nil, []string{"Wine1input"})
 	ev.Wine2input.SetShape([]int{ev.Size}, nil, []string{"Wine2input"})
-	ev.LightFull.SetShape([]int{ev.Size * 2}, nil, []string{"LightFull"})
-	ev.SweetDry.SetShape([]int{ev.Size * 2}, nil, []string{"SweetDry"})
-	ev.AttnDim.SetShape([]int{1}, nil, []string{"AttnDim"})
+	//ev.LightFull.SetShape([]int{ev.NSDDistUnits}, nil, []string{"LightFull"})
+	ev.SweetDry.SetShape([]int{ev.NSDDistUnits}, nil, []string{"SweetDry"})
+	//ev.AttnDim.SetShape([]int{1}, nil, []string{"AttnDim"})
 
-	ev.LightFullPop.Defaults()
-	ev.LightFullPop.Min = float32(-1 * sz)
-	ev.LightFullPop.Max = float32(sz)
+	//ev.LightFullPop.Defaults()
+	//ev.LightFullPop.Min = float32(-1 * sz)
+	//ev.LightFullPop.Max = float32(sz)
+	//ev.LightFullPop.Sigma = 0.1
 	ev.SweetDryPop.Defaults()
 	ev.SweetDryPop.Min = float32(-1 * sz)
 	ev.SweetDryPop.Max = float32(sz)
+	ev.SweetDryPop.Sigma = 0.1
 
 	//ev.EgoInput.SetShape([]int{sz*2 - 1, sz*2 - 1}, nil, []string{"Y", "X"})
 	//ev.Attn.SetShape([]int{sz, sz}, nil, []string{"Y", "X"})
@@ -150,9 +154,9 @@ func (ev *ExEnv) States() env.Elements {
 	els := env.Elements{
 		{"Wine1input", []int{ev.Size}, []string{"Wine1input"}},
 		{"Wine2input", []int{ev.Size}, []string{"Wine2input"}},
-		{"SweetDry", []int{1, ev.Size * 2}, []string{"SweetDry"}},
-		{"LightFull", []int{1, ev.Size * 2}, []string{"LightFull"}},
-		{"AttnDim", []int{1}, []string{"AttnDim"}},
+		{"SweetDry", []int{ev.Size * 2}, []string{"SweetDry"}},
+		//{"LightFull", []int{ev.Size * 2}, []string{"LightFull"}},
+		//{"AttnDim", []int{1}, []string{"AttnDim"}},
 	}
 	return els
 }
@@ -165,10 +169,10 @@ func (ev *ExEnv) State(element string) etensor.Tensor {
 		return &ev.Wine2input
 	case "SweetDry":
 		return &ev.SweetDry
-	case "LightFull":
-		return &ev.LightFull
-	case "AttnDim":
-		return &ev.AttnDim
+		//case "LightFull":
+		//	return &ev.LightFull
+		//case "AttnDim":
+		//	return &ev.AttnDim
 	}
 	return nil
 }
@@ -301,17 +305,18 @@ func (ev *ExEnv) NewCompare() {
 	W1loc := 1
 	W2loc := 1
 	sd := 0
+	ev.Wine1input.SetZeros()
+	ev.Wine2input.SetZeros()
 
 	for {
 		W1loc = rand.Intn(ev.Size)
 		W2loc = rand.Intn(ev.Size)
-		ev.Wine1input.SetZeros()
-		ev.Wine2input.SetZeros()
-		ev.AttnDim.SetZeros()
+
+		//ev.AttnDim.SetZeros()
 
 		//ev.Wine1input.SetFloat([]int{W1loc}, 1)
 		//ev.Wine2input.SetFloat([]int{W2loc}, 1)
-		ev.AttnDim.SetFloat([]int{0}, 1)
+		//ev.AttnDim.SetFloat([]int{0}, 1)
 
 		if W1loc != W2loc {
 			break
@@ -333,9 +338,9 @@ func (ev *ExEnv) NewCompare() {
 		sd = ev.Size
 	}
 
-	ev.DimSwitch = erand.BoolProb(0.5, -1)
-	ev.SweetDryPop.Encode(&ev.SweetDry.Values, float32(sd), 1, false)
-	ev.LightFullPop.Encode(&ev.LightFull.Values, 0, 1, false)
+	//ev.DimSwitch = erand.BoolProb(0.5, -1)
+	ev.SweetDryPop.Encode(&ev.SweetDry.Values, float32(sd), len(ev.SweetDry.Values), false)
+	//ev.LightFullPop.Encode(&ev.LightFull.Values, 0, 1, false)
 
 }
 

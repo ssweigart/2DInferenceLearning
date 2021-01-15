@@ -253,11 +253,11 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	w1hidden := net.AddLayer2D("wine1Hidden", ss.Size, ss.Size, emer.Hidden)
 	w2hidden := net.AddLayer2D("wine2Hidden", ss.Size, ss.Size, emer.Hidden)
 	combhidden := net.AddLayer2D("combinedHidden", ss.Size, ss.Size, emer.Hidden)
-	AttnDim := net.AddLayer2D("AttDim", 1, 1, emer.Input)
-	sd := net.AddLayer2D("SweDry", 1, ss.Size*2, emer.Target)
-	lf := net.AddLayer2D("LigFul", 1, ss.Size*2, emer.Target)
+	//AttnDim := net.AddLayer2D("AttDim", 1, 1, emer.Input)
+	sd := net.AddLayer2D("SweetDry", 1, ss.Size*2, emer.Target)
+	//lf := net.AddLayer2D("LigFul", 1, ss.Size*2, emer.Target)
 
-	//sd.SetClass("Output")
+	sd.SetClass("Output")
 	//lf.SetClass("Output")
 
 	// use this to position layers relative to each other
@@ -268,8 +268,8 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	w2hidden.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Wine2input", YAlign: relpos.Front, Space: 1})
 	combhidden.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "wine2Hidden", XAlign: relpos.Middle, Space: 1})
 	sd.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "combinedHidden", YAlign: relpos.Front, Space: 1, Scale: 1})
-	lf.SetRelPos(relpos.Rel{Rel: relpos.LeftOf, Other: "SweDry", YAlign: relpos.Front, Space: 1, Scale: 1})
-	AttnDim.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "SweDry", YAlign: relpos.Front, Space: 1, Scale: 1})
+	//lf.SetRelPos(relpos.Rel{Rel: relpos.LeftOf, Other: "SweetDry", YAlign: relpos.Front, Space: 1, Scale: 1})
+	//AttnDim.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "SweetDry", YAlign: relpos.Front, Space: 1, Scale: 1})
 
 	// note: see emergent/prjn module for all the options on how to connect
 	// NewFull returns a new prjn.Full connectivity pattern
@@ -277,14 +277,14 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 
 	net.ConnectLayers(w1, w1hidden, full, emer.Forward) //what is full?
 	net.ConnectLayers(w2, w2hidden, full, emer.Forward)
-	net.ConnectLayers(AttnDim, w1hidden, full, emer.Forward)
-	net.ConnectLayers(AttnDim, w2hidden, full, emer.Forward)
+	//net.ConnectLayers(AttnDim, w1hidden, full, emer.Forward)
+	//net.ConnectLayers(AttnDim, w2hidden, full, emer.Forward)
 
 	// connect the combination layers to the w1/w2 hidden layers and then combine the combhidden layer to the sweet/dry light/full keys
 	net.BidirConnectLayers(w1hidden, combhidden, full)
 	net.BidirConnectLayers(w2hidden, combhidden, full)
 	net.BidirConnectLayers(combhidden, sd, full)
-	net.BidirConnectLayers(combhidden, lf, full)
+	//net.BidirConnectLayers(combhidden, lf, full)
 
 	// note: if you wanted to change a layer type from e.g., Target to Compare, do this:
 	// out.SetType(emer.Compare)
@@ -420,7 +420,7 @@ func (ss *Sim) ApplyInputs(en env.Env) {
 	ss.Net.InitExt() // clear any existing inputs -- not strictly necessary if always
 	// going to the same layers, but good practice and cheap anyway
 
-	lays := []string{"Wine1input", "Wine2input", "wine1Hidden", "wine2Hidden", "combinedHidden", "AttDim", "SweDry", "LigFul"}
+	lays := []string{"Wine1input", "Wine2input", "wine1Hidden", "wine2Hidden", "combinedHidden", "SweetDry"} //"AttDim", "LigFul"}
 	for _, lnm := range lays {
 		ly := ss.Net.LayerByName(lnm).(leabra.LeabraLayer).AsLeabra()
 		pats := en.State(ly.Nm)
@@ -520,12 +520,12 @@ func (ss *Sim) TrialStats(accum bool) {
 	//DimSwitch Sweet dry -> 1, light full -> 0
 	//if ss.TrainEnv.DimSwitch {
 	//need list of what is right :O
-	sd := ss.Net.LayerByName("SweDry").(leabra.LeabraLayer).AsLeabra()
+	sd := ss.Net.LayerByName("SweetDry").(leabra.LeabraLayer).AsLeabra()
 	//lf := ss.Net.LayerByName("LightFull").(leabra.LeabraLayer).AsLeabra() // ask randy if we need this??
 	ss.TrlCosDiff = float64(sd.CosDiff.Cos)
 	//ss.EgoCosDiff = float64(inp.CosDiff.Cos)
 	sd_s, sd_a := sd.MSE(.5) //<- USED TO BE .5?
-	fmt.Println(sd_a, sd_s)
+	//fmt.Println(sd_a, sd_s)
 	//lf_s, lf_a := lf.MSE(0.5) // if we need it above
 	ss.TrlSSE = sd_s    //+ lf_s
 	ss.TrlAvgSSE = sd_a //(sd_a + lf_a) / 2
